@@ -16,7 +16,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -41,12 +40,15 @@ public class PManager {
     private int checkValue;
     private char checkType;
     private boolean debug;
+    private YamlConfiguration lt;
+    private String title;
 
-    public PManager(YamlConfiguration config,YamlConfiguration db, File dbFile, DonationAirDrop plugin) {
+    public PManager(YamlConfiguration config,YamlConfiguration db, File dbFile, DonationAirDrop plugin, YamlConfiguration lt) {
         this.config = config;
         this.plugin = plugin;
         this.db = db;
         this.dbFile = dbFile;
+        this.lt = lt;
     }
 
     public void loadSystem() {
@@ -70,6 +72,7 @@ public class PManager {
         checkType = config.getString("checkType").charAt(0);
         checkValue = config.getInt("checkValue");
         debug = config.getBoolean("debugMode");
+        title = lt.getString("title");
     }
 
 
@@ -78,7 +81,7 @@ public class PManager {
         Map<String, Object> ranges = config.getConfigurationSection("ranges").getValues(false);
 
         if (ranges == null) {
-            Bukkit.getLogger().warning("[zDonationAirDrop] No ranges section found in the configuration.");
+            error("noranges");
             return;
         }
 
@@ -86,14 +89,14 @@ public class PManager {
             String keyString = entry.getKey();
             String range = (String) entry.getValue();
 
-            if(debug) Bukkit.getLogger().info("[zDonationAirDrop] Processing range: " + range);
+            if(debug) message("range_process",range,'w');
 
             String[] rangeParts = range.split("-");
 
-            if(debug) Bukkit.getLogger().info("[zDonationAirDrop] Range parts: " + Arrays.toString(rangeParts));
+            if(debug) message("range_parts", Arrays.toString(rangeParts),'w');
 
             if (rangeParts.length != 2) {
-                Bukkit.getLogger().warning("[zDonationAirDrop] Invalid range format: " + range);
+                error("range_invalidvalue", range);
                 continue;
             }
 
@@ -105,22 +108,25 @@ public class PManager {
                 try {
                     key = Integer.parseInt(keyString);
                 } catch (NumberFormatException e) {
-                    Bukkit.getLogger().warning("[zDonationAirDrop] Invalid key format: " + keyString);
+                    error("range_invalidkey", keyString);
                     continue;
                 }
 
-                if(debug) Bukkit.getLogger().info("[zDonationAirDrop] Parsed range: " + start + " to " + end + " with key: " + key);
+                if(debug) message("range_parsed",start + " to " + end + " with key: " + key,'w');
 
                 for (double i = start; i <= end; i += 0.01) {
                     rangeMap.put(i, key);
                 }
             } catch (NumberFormatException e) {
-                Bukkit.getLogger().warning("[zDonationAirDrop] Invalid number format in range: " + range);
+                message("range_invalidnumber", range,'w');
             }
         }
     }
     private void loadCuboid() {
         final World world = Bukkit.getWorld(config.getString("world"));
+
+        if(world == null)
+            error("world_notfound",config.getString("world"));
 
         double x1 = config.getDouble("x1");
         double y1 = config.getDouble("y1");
@@ -148,7 +154,7 @@ public class PManager {
                     Location location = new Location(Bukkit.getServer().getWorld(worldName), x, y, z);
                     chestLocations.put(id, location);
                 } else {
-                    getLogger().warning("[zDonationAirDrop] World " + worldName + " not found for chest ID " + id);
+                    error("general_step","1");
                 }
             }
         }
@@ -192,7 +198,7 @@ public class PManager {
         } else if (checkType == 'm') {
             updatedDate = updatedDate.plusMonths(checkValue);
         } else {
-            throw new IllegalArgumentException("checkType deve essere 'd' o 'm'");
+            error("checktype_invalid");
         }
 
         // Confronta la data attuale con la data aggiornata
@@ -216,6 +222,7 @@ public class PManager {
         try {
             db.save(this.dbFile);
         } catch (IOException e) {
+            error("file_cannotsave");
             throw new RuntimeException("Errore durante il salvataggio del file di configurazione", e);
         }
 
@@ -228,12 +235,55 @@ public class PManager {
         try {
             db.save(this.dbFile);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            error("file_cannotsave");
+            throw new RuntimeException("Errore durante il salvataggio del file di configurazione", e);
         }
     }
 
     //Get
     public String getAmount(){ return String.valueOf(loadedAmount);}
+
+    //Log Builder
+    private void message(String messageName, Character type){
+    if(type == null)
+        type = 'w';
+
+        switch(type){
+            case 'i':
+                Bukkit.getLogger().info(title+lt.getString(messageName)+" ");
+                break;
+            case 'w':
+                Bukkit.getLogger().warning(title+lt.getString(messageName)+" ");
+                break;
+            case 'e':
+                Bukkit.getLogger().severe(title+lt.getString(messageName)+" ");
+                break;
+        }
+
+    }
+    private void message(String messageName,String other, Character type){
+        if(type == null)
+            type = 'w';
+
+        switch(type){
+            case 'i':
+                Bukkit.getLogger().info(title+lt.getString(messageName)+" ");
+                break;
+            case 'w':
+                Bukkit.getLogger().warning(title+lt.getString(messageName)+" ");
+                break;
+            case 'e':
+                Bukkit.getLogger().severe(title+lt.getString(messageName)+" ");
+                break;
+        }
+
+    }
+    private void error(String messageName,String other){
+        Bukkit.getLogger().severe(title+lt.getString(messageName)+" "+other);
+    }
+    private void error(String messageName){
+        Bukkit.getLogger().severe(title+lt.getString(messageName)+" ");
+    }
 
     //Executor
     public void startDrop(double prezzoPagato) {
@@ -245,20 +295,20 @@ public class PManager {
         int giveType = getGiveType(prezzoPagato);
 
         if (giveType == 0) {
-            Bukkit.getLogger().warning("[zDonationAirDrop] No give type found for price " + prezzoPagato);
+            error("give_notypefound");
             return;
         }
 
         Location chestLocation = getChestLocation(giveType);
 
         if (chestLocation == null) {
-            Bukkit.getLogger().warning("[zDonationAirDrop] No chest location found for ID " + giveType);
+            error("give_nochestfound", String.valueOf(giveType));
             return;
         }
 
         Block block = chestLocation.getBlock();
         if (!(block.getState() instanceof Chest)) {
-            Bukkit.getLogger().warning("[zDonationAirDrop] Block at " + chestLocation + " is not a chest.");
+            error("give_blockisnotchest");
             return;
         }
 

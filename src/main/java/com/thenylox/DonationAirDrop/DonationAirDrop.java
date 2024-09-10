@@ -40,6 +40,20 @@ public final class DonationAirDrop extends JavaPlugin {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(configLoader);
         log.info(brightGreen +"×"+cyan+" Config File Loaded"+reset);
 
+        //Lang
+        File langDir = new File(getDataFolder(), "lang");
+        if (!langDir.exists()) {
+            langDir.mkdir();
+        }
+
+        String langType = config.getString("lang")+".yml";
+        File langLoader = new File(langDir, langType);
+        if (!langLoader.exists()) {
+            saveResource("lang/"+langType, false);
+        }
+        YamlConfiguration langFile = YamlConfiguration.loadConfiguration(langLoader);
+        log.info(brightGreen +"×"+cyan+" Lang Loaded"+reset);
+
         //Flat db
         File dbLoader = new File(getDataFolder(), "db.yml");
         if (!dbLoader.exists()) {
@@ -49,7 +63,7 @@ public final class DonationAirDrop extends JavaPlugin {
         log.info(brightGreen +"×"+cyan+" Flat DB Loaded"+reset);
 
         //Istanza del plugin
-        pManaqer = new PManager(config, db, dbLoader, this);
+        pManaqer = new PManager(config, db, dbLoader, this, langFile);
         pManaqer.loadSystem();
 
         //Commands

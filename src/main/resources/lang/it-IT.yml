@@ -1,0 +1,17 @@
+title: "[DonationAirDrop] "
+
+#Errori & Debug
+noranges: "Nessun range trovato all'interno del config"
+range_process: "Processando il range:"
+range_parts: "Parte del range:"
+range_invalidvalue: "Il valore del range inserito non è valido:"
+range_invalidkey: "La chiave del range inserito non è valida:"
+range_parsed: "Range parsato:"
+range_invalidnumber: "Il seguente formato dei numeri presenti nei range non è valido:"
+world_notfound: "Mondo non trovato:"
+general_step: "Problema rilevato allo step:"
+checktype_invalid: "Il checkType inserito nel config non è valido. Valori ammessi: 'd', 'm'"
+file_cannotsave: "C'è stato un errore nel salvataggio del flatDb"
+give_notypefound: "Non è stato trovato nessun range per il valore:"
+give_nochestfound: "Non è stata trovata nessuna chest nel config per il giveType con ID:"
+give_blockisnotchest: "Il blocco indicato nel config non risulta essere una chest"

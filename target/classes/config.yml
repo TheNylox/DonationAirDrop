@@ -1,6 +1,9 @@
 #Inserire il nome del mondo fra gli ""
 world: "world"
 
+#Lingua
+lang: "it-IT"
+
 #Ogni quanto 'resettare' il totale delle donazioni ricevute (su Type puoi mettere "d" per giorni e "m" per mesi.
 #Nell'esempio di default è impostate che ogni nuovo mese viene resettato (1 mese)
 checkType: "m"
