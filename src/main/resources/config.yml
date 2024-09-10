@@ -1,0 +1,47 @@
+#Inserire il nome del mondo fra gli ""
+world: "world"
+
+#Ogni quanto 'resettare' il totale delle donazioni ricevute (su Type puoi mettere "d" per giorni e "m" per mesi.
+#Nell'esempio di default è impostate che ogni nuovo mese viene resettato (1 mese)
+checkType: "m"
+checkValue: 1
+
+#Delay - ogni quanti SECONDI droppare gli item (solo interi)
+dropDelay: 1
+
+#StackDrop - true se vuoi che gli stack vengato droppati per intero, falso se vuoi che vengano droppati 1 per volta
+isStackDrop: true
+
+#Region - usare solo interi. Inserire nella prima serie l'angolo inferiore e nella seconda quello superiore
+x1: 1
+y1: 1
+z1: 1
+
+x2: 1
+y2: 1
+z2: 1
+
+#Ranges - Inserire tutti i range di 'soldi' con il suo progessivo a fianco (rispettare l'indentazione).
+#Per esempio se si vuole un range che va da 10 a 30€ fare "10-30": <numeroprogressivo>
+ranges:
+  "10-19": 1
+  "20-29": 2
+  "30-39": 3
+  "40-49": 4
+
+#Chests - qui è dove il plugin cercherà le chest. Puoi inserirne quante ne vuoi l'importante è rispettare
+#l'indentazione. Se possibile usare un numero progressivo... 1,2,3... che sarà l'id con il quale cercherò il give
+chests:
+  1:
+    world: "world"
+    x: 1
+    y: 1
+    z: 1
+  2:
+    world: "world"
+    x: 1
+    y: 1
+    z: 1
+
+#Non modificare mai questo
+configVersion: 0.3
