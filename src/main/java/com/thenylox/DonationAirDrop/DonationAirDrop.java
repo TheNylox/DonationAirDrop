@@ -25,7 +25,7 @@ public final class DonationAirDrop extends JavaPlugin {
 
         //Intestazione
         log.info(yellow+        "==========================================================================="+reset);
-        log.info(brightGreen+   "Donation Air Drop"+reset+brightGreen+"v0.3                                                "+reset+cyan+"by TheNylox");
+        log.info(brightGreen+   "Donation Air Drop"+reset+brightGreen+" v0.3                                          "+reset+cyan+"by TheNylox");
         log.info(yellow+        "==========================================================================="+reset);
 
         //Config Loader
@@ -38,15 +38,15 @@ public final class DonationAirDrop extends JavaPlugin {
             saveResource("config.yml", false);
         }
         YamlConfiguration config = YamlConfiguration.loadConfiguration(configLoader);
-        log.info(cyan+"× Config File Loaded"+reset);
+        log.info(brightGreen +"×"+cyan+" Config File Loaded"+reset);
 
         //Flat db
         File dbLoader = new File(getDataFolder(), "db.yml");
         if (!dbLoader.exists()) {
-            saveResource("config.yml", false);
+            saveResource("db.yml", false);
         }
         YamlConfiguration db = YamlConfiguration.loadConfiguration(dbLoader);
-        log.info(cyan+"× Flat DB Loaded"+reset);
+        log.info(brightGreen +"×"+cyan+" Flat DB Loaded"+reset);
 
         //Istanza del plugin
         pManaqer = new PManager(config, db, dbLoader, this);
@@ -59,7 +59,7 @@ public final class DonationAirDrop extends JavaPlugin {
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new PlaceholderAPIExtensions(this).register();
         }
-        log.info(brightGreen+"× Custom Placeholders loaded");
+        log.info(brightGreen +"×"+cyan+" Custom Placeholders loaded"+reset);
 
         log.info(brightGreen+"PLUGIN ENABLED");
     }

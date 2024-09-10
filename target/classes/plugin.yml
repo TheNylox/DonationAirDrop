@@ -1,8 +1,8 @@
-name: zDonationAirDrop
-version: '0.2'
-main: com.thenylox.zDonationAirDrop.ZDonationAirDrop
-api-version: '1.20'
+name: DonationAirDrop
+version: '0.3'
+main: com.thenylox.DonationAirDrop.DonationAirDrop
+api-version: '1.21'
 authors: [ TheNylox ]
 depend: [PlaceholderAPI]
 commands:
-  zdd:
+  dd:

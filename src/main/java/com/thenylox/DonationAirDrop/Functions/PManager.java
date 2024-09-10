@@ -16,9 +16,11 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -28,16 +30,17 @@ import static org.bukkit.Bukkit.getLogger;
 public class PManager {
     private final YamlConfiguration config;
     private final DonationAirDrop plugin;
-    private Map<Integer, Integer> rangeMap = new HashMap<>();
+    private Map<Double, Integer> rangeMap = new HashMap<>();
     private Map<Integer, Location> chestLocations = new HashMap<>();
     private Cuboid spawnCuboid;
     private boolean isStackDrop;
     private final YamlConfiguration db;
     private final File dbFile;
     private double loadedAmount;
-    private LocalDate lastRefresh;
+    private String lastRefresh;
     private int checkValue;
     private char checkType;
+    private boolean debug;
 
     public PManager(YamlConfiguration config,YamlConfiguration db, File dbFile, DonationAirDrop plugin) {
         this.config = config;
@@ -60,14 +63,13 @@ public class PManager {
         isStackDrop = config.getBoolean("isStackDrop");
 
         // Carico ammontare in memoria
-        loadedAmount = db.getDouble("amount");
+        loadedAmount = Double.valueOf(db.getString("amount"));
 
         //Carico data ultimo reset e relativi dati
-        String retrievedTime = db.getString("time");
-        lastRefresh = LocalDateTime.parse(retrievedTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME).toLocalDate();
-
+        lastRefresh = db.getString("time");
         checkType = config.getString("checkType").charAt(0);
         checkValue = config.getInt("checkValue");
+        debug = config.getBoolean("debugMode");
     }
 
 
@@ -75,14 +77,45 @@ public class PManager {
     private void loadRanges() {
         Map<String, Object> ranges = config.getConfigurationSection("ranges").getValues(false);
 
-        for (Map.Entry<String, Object> entry : ranges.entrySet()) {
-            String[] rangeParts = entry.getKey().split("-");
-            int start = Integer.parseInt(rangeParts[0]);
-            int end = Integer.parseInt(rangeParts[1]);
-            Integer value = (Integer) entry.getValue();
+        if (ranges == null) {
+            Bukkit.getLogger().warning("[zDonationAirDrop] No ranges section found in the configuration.");
+            return;
+        }
 
-            for (int i = start; i <= end; i++) {
-                rangeMap.put(i, value);
+        for (Map.Entry<String, Object> entry : ranges.entrySet()) {
+            String keyString = entry.getKey();
+            String range = (String) entry.getValue();
+
+            if(debug) Bukkit.getLogger().info("[zDonationAirDrop] Processing range: " + range);
+
+            String[] rangeParts = range.split("-");
+
+            if(debug) Bukkit.getLogger().info("[zDonationAirDrop] Range parts: " + Arrays.toString(rangeParts));
+
+            if (rangeParts.length != 2) {
+                Bukkit.getLogger().warning("[zDonationAirDrop] Invalid range format: " + range);
+                continue;
+            }
+
+            try {
+                double start = Double.parseDouble(rangeParts[0].trim());
+                double end = Double.parseDouble(rangeParts[1].trim());
+                Integer key;
+
+                try {
+                    key = Integer.parseInt(keyString);
+                } catch (NumberFormatException e) {
+                    Bukkit.getLogger().warning("[zDonationAirDrop] Invalid key format: " + keyString);
+                    continue;
+                }
+
+                if(debug) Bukkit.getLogger().info("[zDonationAirDrop] Parsed range: " + start + " to " + end + " with key: " + key);
+
+                for (double i = start; i <= end; i += 0.01) {
+                    rangeMap.put(i, key);
+                }
+            } catch (NumberFormatException e) {
+                Bukkit.getLogger().warning("[zDonationAirDrop] Invalid number format in range: " + range);
             }
         }
     }
@@ -131,36 +164,62 @@ public class PManager {
         return chestLocations.get(id);
     }
     private Integer getGiveType(double number) {
-        return rangeMap.get(number);
+        // Filtra e ordina le voci in ordine crescente per chiave
+        return rangeMap.entrySet().stream()
+                .filter(entry -> entry.getKey() <= number) // Filtra solo le voci che sono <= al numero
+                .sorted(Map.Entry.comparingByKey()) // Ordina le voci per chiave in ordine crescente
+                .reduce((first, second) -> second) // Prendi l'ultima voce che è <= al numero
+                .map(Map.Entry::getValue) // Ottieni il valore dell'ultima voce
+                .orElse(null); // Restituisce null se nessuna voce soddisfa il filtro
     }
+
+
     public boolean hasTimePassed() {
-        LocalDate currentDate = LocalDate.now();
+        // Formato della data
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
+        // Recupera il tempo attuale
+        LocalDateTime actualTime = LocalDateTime.now();
+        LocalDate actualDate = actualTime.toLocalDate(); // Solo data, senza ora
+
+        // Parse della data di ultimo aggiornamento
+        LocalDate lastRefreshDate = LocalDate.parse(lastRefresh, formatter);
+
+        // Incrementa la data di ultimo aggiornamento
+        LocalDate updatedDate = lastRefreshDate;
         if (checkType == 'd') {
-            LocalDate targetDate = lastRefresh.plusDays(checkValue);
-            return currentDate.isAfter(targetDate) || currentDate.isEqual(targetDate);
+            updatedDate = updatedDate.plusDays(checkValue);
         } else if (checkType == 'm') {
-            LocalDate targetDate = lastRefresh.plusMonths(checkValue);
-            return currentDate.isAfter(targetDate) || currentDate.isEqual(targetDate);
+            updatedDate = updatedDate.plusMonths(checkValue);
+        } else {
+            throw new IllegalArgumentException("checkType deve essere 'd' o 'm'");
         }
-        return false;
+
+        // Confronta la data attuale con la data aggiornata
+        boolean isPassed = actualDate.isAfter(updatedDate) || actualDate.isEqual(updatedDate);
+
+        return isPassed;
     }
-    public void resetTimeAndValue(){
-        LocalDate newTime = LocalDate.now();
-        lastRefresh = newTime;
+    public void resetTimeAndValue() {
+        // Crea un formatter per il formato desiderato
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
-        DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        // Ottieni il tempo attuale e formatta come stringa
+        LocalDateTime newTime = LocalDateTime.now();
+        lastRefresh = newTime.format(formatter);
 
-        db.set("amount",0);
-        db.set("time", newTime.format(formatter));
+        // Imposta i valori nel database
+        db.set("amount", "0");
+        db.set("time", lastRefresh);
 
+        // Salva le modifiche al file
         try {
             db.save(this.dbFile);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Errore durante il salvataggio del file di configurazione", e);
         }
 
-
+        loadedAmount = 0;
     }
     private void updateAmount(double amount){
         loadedAmount = loadedAmount + amount;
